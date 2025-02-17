@@ -80,6 +80,38 @@ class KeywordBot:
         # ... (保留原有的初始化代码) ...
         self.message_stats = MessageStats()
 
+    async def add_keyword(self, update: Update, context: CallbackContext):
+        user_id = update.message.from_user.id
+        if not self.check_permission(user_id, PermissionLevel.ADMIN):
+            await update.message.reply_text("抱歉，你没有权限执行此操作。")
+            return
+
+        args = context.args
+        if len(args) < 2:
+            await update.message.reply_text("用法：/add_keyword <关键词> <回复内容>")
+            return
+
+        keyword = args[0]
+        response = ' '.join(args[1:])
+
+        if not hasattr(self, "keywords"):
+            self.keywords = {}
+
+        if keyword in self.keywords:
+            await update.message.reply_text(f"关键词 '{keyword}' 已存在。")
+            return
+
+        self.keywords[keyword] = {
+            'response': response,
+            'permission_level': 'PUBLIC',
+            'created_by': user_id,
+            'created_at': str(update.message.date)
+        }
+        self.save_data()
+
+        await update.message.reply_text(f"关键词 '{keyword}' 已添加，回复内容: {response}")
+
+
     async def edit_keyword(self, update: Update, context: CallbackContext):
         user_id = update.message.from_user.id
         if not self.check_permission(user_id, PermissionLevel.ADMIN):
@@ -148,6 +180,47 @@ class KeywordBot:
             f"原回复内容: {deleted_keyword['response']}"
         )
 
+    async def list_keywords(self, update: Update, context: CallbackContext):
+        """列出所有关键词"""
+        if not hasattr(self, "keywords"):  # 确保关键词字典存在
+            self.keywords = {}
+
+        if not self.keywords:
+            await update.message.reply_text("当前没有已定义的关键词。")
+            return  # ✅ Correct indentation
+
+        response = "关键词列表：\n"
+        for keyword in self.keywords.keys():
+            response += f"- {keyword}\n"
+
+        await update.message.reply_text(response)
+
+    async def set_user_role(self, update: Update, context: CallbackContext):
+        """设置用户角色"""
+        user_id = update.message.from_user.id
+        if not self.check_permission(user_id, PermissionLevel.OWNER):
+            await update.message.reply_text("抱歉，你没有权限执行此操作。")
+            return
+
+        args = context.args
+        if len(args) < 2:
+            await update.message.reply_text("用法：/set_role <用户ID> <角色> (ADMIN, MEMBER)")
+            return
+
+        target_user_id = args[0]
+        role = args[1].upper()
+
+        if role not in ["ADMIN", "MEMBER"]:
+            await update.message.reply_text("无效的角色，请使用 ADMIN 或 MEMBER。")
+            return
+
+        if not hasattr(self, "user_roles"):  # ✅ 确保字典存在
+            self.user_roles = {}
+
+        self.user_roles[target_user_id] = role
+        await update.message.reply_text(f"用户 {target_user_id} 的角色已设置为 {role}")
+
+
     async def show_leaderboard(self, update: Update, context: CallbackContext):
         args = context.args
         period = 'day'  # 默认显示日榜
@@ -198,7 +271,6 @@ def main():
     bot = KeywordBot()
     application = Application.builder().token("7204092520:AAGqE6BLio0q6Q9adxQr3LoFkcD6Uy7_Y4M").build()
 
-    
     # 注册消息处理器
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, bot.message_handler))
     
@@ -213,7 +285,7 @@ def main():
     
     # 排行榜命令
     application.add_handler(CommandHandler("leaderboard", bot.show_leaderboard))
-    
+
     # 运行机器人
     application.run_polling()
 
