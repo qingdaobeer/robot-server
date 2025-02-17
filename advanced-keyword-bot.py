@@ -196,7 +196,8 @@ class KeywordBot:
 
 def main():
     bot = KeywordBot()
-    application = Application.builder().token(bot.config['bot_token']).build()
+    application = Application.builder().token("7204092520:AAGqE6BLio0q6Q9adxQr3LoFkcD6Uy7_Y4M").build()
+
     
     # 注册消息处理器
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, bot.message_handler))
