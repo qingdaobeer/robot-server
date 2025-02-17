@@ -77,7 +77,13 @@ class MessageStats:
 
 class KeywordBot:
     def __init__(self, config_path: str = 'config.json'):
-        # ... (保留原有的初始化代码) ...
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                self.config = json.load(f)  
+        except FileNotFoundError:
+            print("❌ Error: config.json file not found!")
+            self.config = {"bot_token": "", "allowed_group_ids": []}  
+
         self.message_stats = MessageStats()
 
     async def add_keyword(self, update: Update, context: CallbackContext):
